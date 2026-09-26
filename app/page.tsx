@@ -2,38 +2,80 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main>
-      <header>
-        <Link className="brand" href="/" aria-label="Jev demo home">jev<span> / demo</span></Link>
-        <span className="badge">Comment cleanup</span>
+    <div className="shell">
+      <header className="topbar">
+        <Link className="brand" href="/" aria-label="Jev home">
+          jev<span className="brand-dot">✳</span>
+        </Link>
+        <span className="header-divider" />
+        <span className="lab-name">A little context goes a long way.</span>
       </header>
-
-      <section className="intro" aria-labelledby="page-title">
-        <p className="eyebrow">Less noise. More context.</p>
-        <h1 id="page-title">Keep the knowledge.<br />Remove the narration.</h1>
-        <p className="description">
-          A small experiment in better code comments. Compare how Jev and an LLM
-          spot outdated explanations, trim the obvious, and preserve what matters.
-        </p>
-      </section>
-
-      <section className="comparison" aria-label="Comparison approaches">
-        <article>
-          <span className="number">01</span>
-          <h2>With Jev</h2>
-          <p>Explore comment cleanup with a Jev-backed agent.</p>
-        </article>
-        <article>
-          <span className="number">02</span>
-          <h2>With an LLM</h2>
-          <p>Run the same cleanup task with a direct LLM agent.</p>
-        </article>
-      </section>
-
-      <footer>
-        <span>One repository. Two approaches.</span>
-        <span>Comparison coming soon</span>
-      </footer>
-    </main>
+      <main className="landing">
+        <section className="intro landing-intro">
+          <div>
+            <p className="eyebrow">
+              <span /> SMALLER COMMENTS. BIGGER CLARITY.
+            </p>
+            <h1>
+              Less noise.
+              <br />
+              <span>More context.</span>
+            </h1>
+            <p className="description">
+              Jev helps coding agents understand the why behind your code.
+              <br className="desktop-break" /> Keep the knowledge that matters.
+              Clear away the clutter.
+            </p>
+            <Link className="try-button" href="/demo">
+              Try it now <span aria-hidden="true">↗</span>
+            </Link>
+            <p className="landing-caption">
+              An interactive demo. No setup needed.
+            </p>
+          </div>
+          <aside
+            className="landing-example"
+            aria-label="An example of useful context"
+          >
+            <div className="example-label">THE DIFFERENCE IS IN THE WHY</div>
+            <p className="example-removed">
+              <span aria-hidden="true">−</span> <s>{"// Wait before retrying"}</s>
+            </p>
+            <p className="example-kept">
+              <span aria-hidden="true">✓</span>{" // Jitter prevents synchronized retries."}
+            </p>
+            <div className="example-explanation">
+              Remove the narration.
+              <br />
+              <strong>Preserve the reason.</strong>
+            </div>
+          </aside>
+        </section>
+        <section className="landing-summary" aria-labelledby="experiment-title">
+          <p className="eyebrow">ONE TASK. TWO APPROACHES.</p>
+          <h2 id="experiment-title">Start with better code comments.</h2>
+          <p>
+            Explore a comment-cleanup task with Jev and Codex side by side. See
+            what each removes, what it keeps, and why that context matters.
+          </p>
+          <span className="demo-badge">
+            Sample results today. Live agents to follow.
+          </span>
+        </section>
+        <footer className="page-footer">
+          <span className="footer-brand">
+            jev<span>✳</span>
+            <small>Built for the details that matter.</small>
+          </span>
+          <a
+            href="https://github.com/lucascanna/jev-hackaton"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View on GitHub ↗
+          </a>
+        </footer>
+      </main>
+    </div>
   );
 }

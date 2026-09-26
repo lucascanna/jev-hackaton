@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
@@ -15,6 +16,14 @@ export default function Home() {
           A small experiment in better code comments. Compare how Jev and an LLM
           spot outdated explanations, trim the obvious, and preserve what matters.
         </p>
+        <Image
+          className="hero-image"
+          src="/comment-cleanup.svg"
+          alt="Two code windows showing noisy comments becoming a concise, focused explanation."
+          width={1200}
+          height={460}
+          loading="eager"
+        />
       </section>
 
       <section className="comparison" aria-label="Comparison approaches">

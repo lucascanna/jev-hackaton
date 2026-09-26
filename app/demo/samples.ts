@@ -1,50 +1,11 @@
-// Illustrative fixtures only. These are not measured agent outputs.
-export const categories = {
-  useful: {
-    label: "Useful context",
-    action: "Keep",
-    example: "The provider may retry this request; keep processing idempotent.",
-  },
-  directive: {
-    label: "Required directive",
-    action: "Keep",
-    example: "License notice, lint directive, generated-file marker",
-  },
-  obvious: {
-    label: "Obvious narration",
-    action: "Delete",
-    example: "Increment the counter.",
-  },
-  history: {
-    label: "Editing history",
-    action: "Delete or move to commit history",
-    example: "We used to call X, but now call Y.",
-  },
-  excessive: {
-    label: "Excessive explanation",
-    action: "Shorten",
-    example: "A paragraph defending a straightforward choice",
-  },
-  stale: {
-    label: "Stale or inaccurate",
-    action: "Flag for verification",
-    example: "Returns null when the function now throws.",
-  },
-  unclear: {
-    label: "Unclear intent",
-    action: "Investigate and rewrite if the reason can be established",
-    example: "Don’t change this; it breaks things.",
-  },
-} as const;
+import type { Category } from "@/lib/categories";
 
-export type Category = keyof typeof categories;
 export type Sample = {
   file: string;
   path: string;
   description: string;
   lines: string[];
   comments: { line: number; category: Category }[];
-  mockTime: { jev: string; codex: string };
 };
 
 export const samples: Sample[] = [
@@ -77,7 +38,6 @@ export const samples: Sample[] = [
       { line: 8, category: "stale" },
       { line: 10, category: "unclear" },
     ],
-    mockTime: { jev: "1.8 s", codex: "2.3 s" },
   },
   {
     file: "retry.ts",
@@ -104,7 +64,6 @@ export const samples: Sample[] = [
       { line: 2, category: "obvious" },
       { line: 8, category: "useful" },
     ],
-    mockTime: { jev: "1.2 s", codex: "1.6 s" },
   },
   {
     file: "cache.ts",
@@ -125,6 +84,5 @@ export const samples: Sample[] = [
       { line: 3, category: "obvious" },
       { line: 5, category: "useful" },
     ],
-    mockTime: { jev: "1.1 s", codex: "1.5 s" },
   },
 ];

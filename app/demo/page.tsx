@@ -2,41 +2,40 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { categories, samples, type Sample } from "./mock-results";
+import { categories } from "@/lib/categories";
+import { samples, type Sample } from "./samples";
+import type { Classification, CleanupResult } from "@/lib/cleanup";
 
 function CodeView({
   sample,
-  annotated = false,
+  annotations,
 }: {
   sample: Sample;
-  annotated?: boolean;
+  annotations?: Classification[];
 }) {
-  const comments = new Map(
-    sample.comments.map((comment) => [comment.line, comment.category]),
-  );
   return (
     <div
       className="mock-code"
-      aria-label={annotated ? "Classified original code" : "Original code"}
+      aria-label={annotations ? "Classified original code" : "Original code"}
     >
       {sample.lines.map((line, index) => {
-        const category = comments.get(index);
-        const detail = category && categories[category];
+        const matches = annotations?.filter(comment => index >= comment.line - 1 && index < comment.line + comment.text.split(/\r\n|[\n\r\u2028\u2029]/).length - 1) || [];
+        const category = matches[0]?.category;
         return (
           <div
-            className={`mock-code-row ${category ? `comment-row ${annotated ? `category-${category}` : ""}` : ""}`}
+            className={`mock-code-row ${category ? `comment-row ${`category-${category}`}` : ""}`}
             key={index}
           >
             <div className="mock-code-text">
               <span className="mock-line-number">{index + 1}</span>
               <code>{line || " "}</code>
             </div>
-            {annotated && detail && (
-              <div className="comment-annotation">
-                <span className="category-label">{detail.label}</span>
-                <span className="category-action">{detail.action}</span>
+            {matches.filter(comment => comment.line - 1 === index).map(comment => (
+              <div className="comment-annotation" key={comment.start}>
+                <span className="category-label">{categories[comment.category].label}</span>
+                <span className="category-action">{categories[comment.category].action}</span>
               </div>
-            )}
+            ))}
           </div>
         );
       })}
@@ -47,13 +46,13 @@ function CodeView({
 function ResultPane({
   model,
   sample,
-  status,
+  state,
 }: {
   model: "Jev" | "Codex";
   sample: Sample;
-  status: "ready" | "running" | "done";
+  state: RunState;
 }) {
-  const time = model === "Jev" ? sample.mockTime.jev : sample.mockTime.codex;
+  const { status, result, error } = state;
   return (
     <article className="mock-pane result-pane" aria-label={`${model} result`}>
       <div className="mock-pane-header">
@@ -66,14 +65,14 @@ function ResultPane({
         <span className="pane-status">
           {status === "done"
             ? "Result"
-            : status === "running"
+            : status === "error" ? "Error" : status === "running"
               ? "Running"
               : "Ready"}
         </span>
       </div>
       <div className="mock-pane-body" aria-live="polite">
         {status === "done" ? (
-          <CodeView sample={sample} annotated />
+          <CodeView sample={sample} annotations={result?.comments} />
         ) : (
           <div className="empty-result">
             <span className="empty-symbol">
@@ -82,42 +81,59 @@ function ResultPane({
             <p>
               {status === "running"
                 ? "Classifying comments…"
-                : "Run the comparison to view classifications"}
+                : error || "Run the comparison to view classifications"}
             </p>
           </div>
         )}
       </div>
       <div className="mock-pane-footer">
         <span>
-          Time taken <small>(mock)</small>
+          Time taken <small>(request)</small>
         </span>
-        <strong>{status === "done" ? time : "—"}</strong>
+        <strong>{result ? `${(result.elapsedMs / 1000).toFixed(2)} s` : "—"}</strong>
       </div>
     </article>
   );
 }
 
+type RunState = { status: "ready" | "running" | "done" | "error"; result?: CleanupResult; error?: string };
+const ready: RunState = { status: "ready" };
+
 export default function Demo() {
   const [sampleIndex, setSampleIndex] = useState(0);
-  const [status, setStatus] = useState<"ready" | "running" | "done">("ready");
+  const [runs, setRuns] = useState({ jev: ready, codex: ready });
   const [showGuide, setShowGuide] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controller = useRef<AbortController | null>(null);
   const sample = samples[sampleIndex];
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  const running = runs.jev.status === "running" || runs.codex.status === "running";
+  useEffect(() => () => controller.current?.abort(), []);
   function reset(index = sampleIndex) {
-    if (timer.current) clearTimeout(timer.current);
+    controller.current?.abort();
+    controller.current = null;
     setSampleIndex(index);
-    setStatus("ready");
+    setRuns({ jev: ready, codex: ready });
   }
-  function run() {
-    if (timer.current) clearTimeout(timer.current);
-    setStatus("running");
-    timer.current = setTimeout(() => setStatus("done"), 900);
+  async function run() {
+    if (running) return;
+    const current = new AbortController();
+    controller.current = current;
+    setRuns({ jev: { status: "running" }, codex: { status: "running" } });
+    await Promise.all((["jev", "codex"] as const).map(async provider => {
+      try {
+        const response = await fetch("/api/cleanup", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, code: sample.lines.join("\n") }),
+          signal: AbortSignal.any([current.signal, AbortSignal.timeout(100_000)]),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Classification failed. Try again.");
+        if (controller.current === current) setRuns(previous => ({ ...previous, [provider]: { status: "done", result: body } }));
+      } catch (error) {
+        if (controller.current === current) setRuns(previous => ({ ...previous, [provider]: {
+          status: "error", error: error instanceof Error && error.name === "TimeoutError" ? "Request timed out. Try again." : error instanceof Error ? error.message : "Could not connect. Try again.",
+        } }));
+      }
+    }));
   }
 
   return (
@@ -130,7 +146,7 @@ export default function Demo() {
         <h1 className="app-title">Comment review</h1>
         <div className="header-right">
           <span className="demo-badge">
-            <i /> Mock results
+            <i /> API comparison
           </span>
           <button
             className="text-button"
@@ -149,7 +165,7 @@ export default function Demo() {
               id="sample"
               value={sampleIndex}
               onChange={(event) => reset(Number(event.target.value))}
-              disabled={status === "running"}
+              disabled={running}
             >
               {samples.map((item, index) => (
                 <option value={index} key={item.file}>
@@ -163,7 +179,7 @@ export default function Demo() {
             <button
               className="reset"
               onClick={() => reset()}
-              disabled={status === "ready"}
+              disabled={runs.jev.status === "ready" && runs.codex.status === "ready"}
               aria-label="Reset comparison"
             >
               ↺
@@ -171,13 +187,9 @@ export default function Demo() {
             <button
               className="run-button"
               onClick={run}
-              disabled={status === "running"}
+              disabled={running}
             >
-              {status === "running"
-                ? "Running…"
-                : status === "done"
-                  ? "Run again"
-                  : "Run comparison"}
+              {running ? "Running…" : "Run comparison"}
             </button>
           </div>
         </div>
@@ -185,7 +197,7 @@ export default function Demo() {
           <section className="category-guide" aria-label="Comment categories">
             <div className="guide-intro">
               <strong>Comment categories</strong>
-              <span>Illustrative classification rules</span>
+              <span>Same categories for both models</span>
             </div>
             <div className="guide-grid">
               {Object.entries(categories).map(([key, detail]) => (
@@ -216,8 +228,8 @@ export default function Demo() {
               <strong>{sample.file}</strong>
             </div>
           </article>
-          <ResultPane model="Jev" sample={sample} status={status} />
-          <ResultPane model="Codex" sample={sample} status={status} />
+          <ResultPane model="Jev" sample={sample} state={runs.jev} />
+          <ResultPane model="Codex" sample={sample} state={runs.codex} />
         </section>
       </main>
     </div>

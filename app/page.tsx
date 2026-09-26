@@ -30,7 +30,7 @@ export default function Home() {
               Try it now <span aria-hidden="true">↗</span>
             </Link>
             <p className="landing-caption">
-              An interactive demo. No setup needed.
+              Compare classifications on example source files.
             </p>
           </div>
           <aside
@@ -59,7 +59,7 @@ export default function Home() {
             what each removes, what it keeps, and why that context matters.
           </p>
           <span className="demo-badge">
-            Sample results today. Live agents to follow.
+            Seven categories. Two models. Original code preserved.
           </span>
         </section>
         <footer className="page-footer">
